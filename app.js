@@ -8,7 +8,9 @@ app.get('/', (req, res)=> res.sendFile(path.join(__dirname, 'index.html')));
 
 app.post('/api/auth', async(req, res, next)=> {
   try {
-    res.send({ token: await User.authenticate(req.body)});
+    const user = await User.authenticate(req.body);
+    const token = await user.generateToken();
+    res.send(token);
   }
   catch(ex){
     next(ex);

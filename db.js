@@ -1,4 +1,8 @@
 const Sequelize = require('sequelize');
+//use jwt to make secret that allow one user and one password. //Lucy can't just change her ID to Moe's and log in with Moe's page
+const jwt = require('jsonwebtoken')
+const bcrypt = require('bcrypt')
+
 const { STRING } = Sequelize;
 const config = {
   logging: false
@@ -14,10 +18,21 @@ const User = conn.define('user', {
   password: STRING
 });
 
+User.prototype.generateToken = async function(){
+  try{
+    const token = await jwt.sign({id: this.id}, process.env.JWT);
+    return {token}
+  }catch(error){
+    return(error)
+  }
+}
+
 User.byToken = async(token)=> {
   try {
-    const user = await User.findByPk(token);
-    if(user){
+    const payload = await jwt.verify(token, process.env.JWT)
+    console.log(payload)
+    if(payload){
+      const user = await User.findByPk(payload.id);
       return user;
     }
     const error = Error('bad credentials');
@@ -38,8 +53,9 @@ User.authenticate = async({ username, password })=> {
       password
     }
   });
-  if(user){
-    return user.id;
+  const correct = await bcrypt.compare(password, user.password)
+  if(correct){
+    return(user)
   }
   const error = Error('bad credentials');
   error.status = 401;
